@@ -1,333 +1,114 @@
-using System.Data;
-using Microsoft.Data.SqlClient;
 using AcaBiblioteca.Datos;
-using AcaBiblioteca.Entidades;
+using Microsoft.Data.SqlClient;
+using System.Data;
 
-namespace AcaBiblioteca
+namespace AcaBiblioteca;
+
+public partial class FrmPrestamos : Form
 {
-    public partial class FrmPrestamos : Form
+    private readonly ComboBox cmbUsuario = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };
+    private readonly ComboBox cmbLibro = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 360 };
+    private readonly DateTimePicker dtpFecha = new() { Format = DateTimePickerFormat.Short, Width = 130, Value = DateTime.Today };
+    private readonly DataGridView dgv = new();
+    private readonly Conexion conexion = new();
+
+    public FrmPrestamos()
     {
-        private readonly PrestamoDAO _prestamoDAO = new PrestamoDAO();
-        private int? _idPrestamoSeleccionado = null;
-        private string? _isbnSeleccionado = null;
-
-        public FrmPrestamos()
-        {
-            InitializeComponent();
-            ConfigurarFormulario();
-            CargarDatosIniciales();
-        }
-
-        private void ConfigurarFormulario()
-        {
-            // Configuración del DateTimePicker de devolución
-            dtpFechaDevolucion.ShowCheckBox = true;
-            dtpFechaDevolucion.Checked = false;
-            dtpFechaPrestamo.Value = DateTime.Today;
-
-            // Estilo del DataGridView
-            dgvPrestamos.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
-            dgvPrestamos.MultiSelect = false;
-            dgvPrestamos.ReadOnly = true;
-            dgvPrestamos.AllowUserToAddRows = false;
-            dgvPrestamos.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
-        }
-
-        private void CargarDatosIniciales()
-        {
-            CargarPrestamos();
-            CargarUsuarios();
-            CargarLibros();
-            LimpiarCampos();
-        }
-
-        #region Carga de datos
-
-        private void CargarPrestamos()
-        {
-            try
-            {
-                dgvPrestamos.DataSource = _prestamoDAO.ListarTodos();
-
-                // Ocultar columnas técnicas si existen
-                if (dgvPrestamos.Columns.Contains("IdUsuario"))
-                    dgvPrestamos.Columns["IdUsuario"].Visible = false;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al cargar los préstamos:\n" + ex.Message,
-                    "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void CargarUsuarios()
-        {
-            try
-            {
-                Conexion conexion = new Conexion();
-                using var cn = conexion.ObtenerConexion();
-                cn.Open();
-
-                string sql = "SELECT IdUsuario, Nombre, Apellido FROM Usuarios ORDER BY Nombre, Apellido";
-                using var da = new SqlDataAdapter(sql, cn);
-                var tabla = new DataTable();
-                da.Fill(tabla);
-
-                tabla.Columns.Add("NombreCompleto", typeof(string));
-                foreach (DataRow fila in tabla.Rows)
-                    fila["NombreCompleto"] = $"{fila["Nombre"]} {fila["Apellido"]}";
-
-                cmbUsuario.DataSource = tabla;
-                cmbUsuario.DisplayMember = "NombreCompleto";
-                cmbUsuario.ValueMember = "IdUsuario";
-                cmbUsuario.SelectedIndex = -1;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al cargar los usuarios:\n" + ex.Message,
-                    "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void CargarLibros()
-        {
-            try
-            {
-                Conexion conexion = new Conexion();
-                using var cn = conexion.ObtenerConexion();
-                cn.Open();
-
-                // Solo libros con existencias disponibles
-                string sql = "SELECT ISBN, Titulo, Existencias FROM Libros WHERE Existencias > 0 ORDER BY Titulo";
-                using var da = new SqlDataAdapter(sql, cn);
-                var tabla = new DataTable();
-                da.Fill(tabla);
-
-                cmbLibro.DataSource = tabla;
-                cmbLibro.DisplayMember = "Titulo";
-                cmbLibro.ValueMember = "ISBN";
-                cmbLibro.SelectedIndex = -1;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al cargar los libros:\n" + ex.Message,
-                    "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        #endregion
-
-        #region Eventos de botones
-
-        private void btnNuevo_Click(object? sender, EventArgs e)
-        {
-            LimpiarCampos();
-            cmbUsuario.Focus();
-        }
-
-        private void btnGuardar_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                // Validaciones
-                if (cmbUsuario.SelectedIndex == -1)
-                {
-                    MessageBox.Show("Debe seleccionar un usuario.", "Validación",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    cmbUsuario.Focus();
-                    return;
-                }
-
-                if (cmbLibro.SelectedIndex == -1)
-                {
-                    MessageBox.Show("Debe seleccionar un libro.", "Validación",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    cmbLibro.Focus();
-                    return;
-                }
-
-                string isbn = cmbLibro.SelectedValue!.ToString()!;
-                int existencias = _prestamoDAO.ObtenerExistencias(isbn);
-
-                if (existencias <= 0)
-                {
-                    MessageBox.Show("El libro seleccionado no tiene existencias disponibles.",
-                        "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                var prestamo = new Prestamo
-                {
-                    IdUsuario = Convert.ToInt32(cmbUsuario.SelectedValue),
-                    ISBN = isbn,
-                    FechaPrestamo = dtpFechaPrestamo.Value.Date
-                };
-
-                _prestamoDAO.Insertar(prestamo);
-
-                MessageBox.Show("Préstamo registrado correctamente.", "Biblioteca",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                CargarPrestamos();
-                CargarLibros(); // Actualizar existencias en el combo
-                LimpiarCampos();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al registrar el préstamo:\n" + ex.Message,
-                    "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btnDevolver_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (_idPrestamoSeleccionado == null || string.IsNullOrEmpty(_isbnSeleccionado))
-                {
-                    MessageBox.Show("Seleccione un préstamo de la lista para registrar la devolución.",
-                        "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                // Verificar que el préstamo esté en estado Prestado
-                DataGridViewRow? fila = dgvPrestamos.CurrentRow;
-                if (fila == null) return;
-
-                string estado = fila.Cells["Estado"].Value?.ToString() ?? "";
-                if (estado != "Prestado")
-                {
-                    MessageBox.Show("Solo se pueden devolver préstamos que estén en estado 'Prestado'.",
-                        "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                DateTime fechaDevolucion = dtpFechaDevolucion.Checked
-                    ? dtpFechaDevolucion.Value.Date
-                    : DateTime.Today;
-
-                if (fechaDevolucion < dtpFechaPrestamo.Value.Date)
-                {
-                    MessageBox.Show("La fecha de devolución no puede ser anterior a la fecha de préstamo.",
-                        "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                DialogResult respuesta = MessageBox.Show(
-                    "¿Está seguro de registrar la devolución de este libro?",
-                    "Confirmar devolución",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-
-                if (respuesta != DialogResult.Yes) return;
-
-                _prestamoDAO.RegistrarDevolucion(
-                    _idPrestamoSeleccionado.Value,
-                    _isbnSeleccionado,
-                    fechaDevolucion);
-
-                MessageBox.Show("Devolución registrada correctamente.", "Biblioteca",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                CargarPrestamos();
-                CargarLibros();
-                LimpiarCampos();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al registrar la devolución:\n" + ex.Message,
-                    "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btnEliminar_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                if (_idPrestamoSeleccionado == null)
-                {
-                    MessageBox.Show("Seleccione un préstamo de la lista.",
-                        "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-
-                DialogResult respuesta = MessageBox.Show(
-                    "¿Está seguro de eliminar este registro de préstamo?\n(Solo se pueden eliminar préstamos ya devueltos)",
-                    "Confirmar eliminación",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question);
-
-                if (respuesta != DialogResult.Yes) return;
-
-                _prestamoDAO.Eliminar(_idPrestamoSeleccionado.Value);
-
-                MessageBox.Show("Préstamo eliminado correctamente.", "Biblioteca",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                CargarPrestamos();
-                LimpiarCampos();
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error al eliminar:\n" + ex.Message,
-                    "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private void btnCancelar_Click(object sender, EventArgs e)
-        {
-            LimpiarCampos();
-        }
-
-        #endregion
-
-        #region Eventos del DataGridView
-
-        private void dgvPrestamos_CellClick(object sender, DataGridViewCellEventArgs e)
-        {
-            if (e.RowIndex < 0) return;
-
-            DataGridViewRow fila = dgvPrestamos.Rows[e.RowIndex];
-
-            _idPrestamoSeleccionado = Convert.ToInt32(fila.Cells["IdPrestamo"].Value);
-            _isbnSeleccionado = fila.Cells["ISBN"].Value?.ToString();
-
-            // Cargar datos en los controles
-            if (fila.Cells["IdUsuario"].Value != null)
-                cmbUsuario.SelectedValue = fila.Cells["IdUsuario"].Value;
-
-            if (!string.IsNullOrEmpty(_isbnSeleccionado))
-                cmbLibro.SelectedValue = _isbnSeleccionado;
-
-            if (fila.Cells["FechaPrestamo"].Value != DBNull.Value)
-                dtpFechaPrestamo.Value = Convert.ToDateTime(fila.Cells["FechaPrestamo"].Value);
-
-            if (fila.Cells["FechaDevolucion"].Value != DBNull.Value &&
-                fila.Cells["FechaDevolucion"].Value != null)
-            {
-                dtpFechaDevolucion.Value = Convert.ToDateTime(fila.Cells["FechaDevolucion"].Value);
-                dtpFechaDevolucion.Checked = true;
-            }
-            else
-            {
-                dtpFechaDevolucion.Checked = false;
-            }
-        }
-
-        #endregion
-
-        private void LimpiarCampos()
-        {
-            _idPrestamoSeleccionado = null;
-            _isbnSeleccionado = null;
-
-            cmbUsuario.SelectedIndex = -1;
-            cmbLibro.SelectedIndex = -1;
-            dtpFechaPrestamo.Value = DateTime.Today;
-            dtpFechaDevolucion.Value = DateTime.Today;
-            dtpFechaDevolucion.Checked = false;
-
-            dgvPrestamos.ClearSelection();
-        }
+        InitializeComponent();
+        ConstruirInterfaz();
+        Load += (_, _) => { CargarCombos(); CargarPrestamos(); };
     }
+
+    private void ConstruirInterfaz()
+    {
+        Text = "Gestión de préstamos"; BackColor = Color.White; Padding = new Padding(16);
+        var titulo = new Label { Text = "PRÉSTAMOS Y DEVOLUCIONES", Dock = DockStyle.Top, Height = 42,
+            Font = new Font("Segoe UI", 16, FontStyle.Bold), ForeColor = Color.FromArgb(35,57,85) };
+        var filtros = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 92, WrapContents = true, Padding = new Padding(0,8,0,8) };
+        filtros.Controls.Add(UiHelper.Etiqueta("Usuario:")); filtros.Controls.Add(cmbUsuario);
+        filtros.Controls.Add(UiHelper.Etiqueta("Libro disponible:")); filtros.Controls.Add(cmbLibro);
+        filtros.Controls.Add(UiHelper.Etiqueta("Fecha:")); filtros.Controls.Add(dtpFecha);
+        var acciones = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 48 };
+        var btnPrestar = UiHelper.Boton("Registrar préstamo"); btnPrestar.Click += (_, _) => RegistrarPrestamo();
+        var btnDevolver = UiHelper.Boton("Registrar devolución"); btnDevolver.Click += (_, _) => RegistrarDevolucion();
+        var btnActualizar = UiHelper.Boton("Actualizar lista"); btnActualizar.Click += (_, _) => { CargarCombos(); CargarPrestamos(); };
+        acciones.Controls.AddRange(new Control[] { btnPrestar, btnDevolver, btnActualizar });
+        UiHelper.EstilizarGrid(dgv);
+        Controls.Add(dgv); Controls.Add(acciones); Controls.Add(filtros); Controls.Add(titulo);
+    }
+
+    private void CargarCombos()
+    {
+        try
+        {
+            using var cn = conexion.ObtenerConexion(); cn.Open();
+            using (var da = new SqlDataAdapter("SELECT IdUsuario, CONCAT(Nombre,' ',Apellido,' - ',Documento) AS NombreCompleto FROM Usuarios ORDER BY Nombre,Apellido", cn))
+            { var dt = new DataTable(); da.Fill(dt); cmbUsuario.DataSource = dt; cmbUsuario.DisplayMember = "NombreCompleto"; cmbUsuario.ValueMember = "IdUsuario"; }
+            using (var da = new SqlDataAdapter("SELECT ISBN, CONCAT(Titulo,' (',ISBN,') - disponibles: ',Existencias) AS Descripcion FROM Libros WHERE Existencias > 0 ORDER BY Titulo", cn))
+            { var dt = new DataTable(); da.Fill(dt); cmbLibro.DataSource = dt; cmbLibro.DisplayMember = "Descripcion"; cmbLibro.ValueMember = "ISBN"; }
+        }
+        catch (Exception ex) { Error("No fue posible cargar usuarios y libros.", ex); }
+    }
+
+    private void CargarPrestamos()
+    {
+        try
+        {
+            using var cn = conexion.ObtenerConexion();
+            const string sql = @"SELECT p.IdPrestamo, CONCAT(u.Nombre,' ',u.Apellido) AS Usuario, p.ISBN, l.Titulo AS Libro,
+                p.FechaPrestamo, p.FechaDevolucion, p.Estado FROM Prestamos p
+                INNER JOIN Usuarios u ON u.IdUsuario=p.IdUsuario INNER JOIN Libros l ON l.ISBN=p.ISBN
+                ORDER BY CASE WHEN p.Estado='Prestado' THEN 0 ELSE 1 END, p.FechaPrestamo DESC";
+            using var da = new SqlDataAdapter(sql, cn); var dt = new DataTable(); da.Fill(dt); dgv.DataSource = dt;
+            if (dgv.Columns.Contains("IdPrestamo")) dgv.Columns["IdPrestamo"].HeaderText = "N.º préstamo";
+            if (dgv.Columns.Contains("FechaPrestamo")) dgv.Columns["FechaPrestamo"].HeaderText = "Fecha préstamo";
+            if (dgv.Columns.Contains("FechaDevolucion")) dgv.Columns["FechaDevolucion"].HeaderText = "Fecha devolución";
+        }
+        catch (Exception ex) { Error("No fue posible consultar los préstamos.", ex); }
+    }
+
+    private void RegistrarPrestamo()
+    {
+        if (cmbUsuario.SelectedValue == null || cmbLibro.SelectedValue == null)
+        { MessageBox.Show("Debe seleccionar un usuario y un libro con existencias.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+        using var cn = conexion.ObtenerConexion(); cn.Open(); using var tx = cn.BeginTransaction();
+        try
+        {
+            using var descontar = new SqlCommand("UPDATE Libros SET Existencias=Existencias-1 WHERE ISBN=@ISBN AND Existencias>0", cn, tx);
+            descontar.Parameters.Add("@ISBN", SqlDbType.VarChar, 20).Value = cmbLibro.SelectedValue.ToString();
+            if (descontar.ExecuteNonQuery() != 1) throw new InvalidOperationException("El libro ya no tiene existencias disponibles.");
+            using var insertar = new SqlCommand("INSERT INTO Prestamos(IdUsuario,ISBN,FechaPrestamo,Estado) VALUES(@Usuario,@ISBN,@Fecha,'Prestado')", cn, tx);
+            insertar.Parameters.Add("@Usuario", SqlDbType.Int).Value = Convert.ToInt32(cmbUsuario.SelectedValue);
+            insertar.Parameters.Add("@ISBN", SqlDbType.VarChar, 20).Value = cmbLibro.SelectedValue.ToString();
+            insertar.Parameters.Add("@Fecha", SqlDbType.Date).Value = dtpFecha.Value.Date;
+            insertar.ExecuteNonQuery(); tx.Commit();
+            MessageBox.Show("Préstamo registrado. Las existencias se actualizaron correctamente.", "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            CargarCombos(); CargarPrestamos();
+        }
+        catch (Exception ex) { tx.Rollback(); Error("No se pudo registrar el préstamo.", ex); }
+    }
+
+    private void RegistrarDevolucion()
+    {
+        if (dgv.CurrentRow == null || dgv.CurrentRow.Cells["IdPrestamo"].Value == DBNull.Value)
+        { MessageBox.Show("Seleccione un préstamo activo en la tabla.", "Validación", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+        if (!string.Equals(Convert.ToString(dgv.CurrentRow.Cells["Estado"].Value), "Prestado", StringComparison.OrdinalIgnoreCase))
+        { MessageBox.Show("El préstamo seleccionado ya fue devuelto.", "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+        int id = Convert.ToInt32(dgv.CurrentRow.Cells["IdPrestamo"].Value);
+        string isbn = Convert.ToString(dgv.CurrentRow.Cells["ISBN"].Value)!;
+        using var cn = conexion.ObtenerConexion(); cn.Open(); using var tx = cn.BeginTransaction();
+        try
+        {
+            using var actualizar = new SqlCommand("UPDATE Prestamos SET FechaDevolucion=@Fecha,Estado='Devuelto' WHERE IdPrestamo=@Id AND Estado='Prestado'", cn, tx);
+            actualizar.Parameters.Add("@Fecha", SqlDbType.Date).Value = DateTime.Today; actualizar.Parameters.Add("@Id", SqlDbType.Int).Value = id;
+            if (actualizar.ExecuteNonQuery() != 1) throw new InvalidOperationException("El préstamo cambió o ya fue devuelto.");
+            using var reponer = new SqlCommand("UPDATE Libros SET Existencias=Existencias+1 WHERE ISBN=@ISBN", cn, tx);
+            reponer.Parameters.Add("@ISBN", SqlDbType.VarChar, 20).Value = isbn; reponer.ExecuteNonQuery();
+            tx.Commit(); MessageBox.Show("Devolución registrada y existencias repuestas.", "Biblioteca", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            CargarCombos(); CargarPrestamos();
+        }
+        catch (Exception ex) { tx.Rollback(); Error("No se pudo registrar la devolución.", ex); }
+    }
+
+    private static void Error(string mensaje, Exception ex) => MessageBox.Show(mensaje + "\n" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 }

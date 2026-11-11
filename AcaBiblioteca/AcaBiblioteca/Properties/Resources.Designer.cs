@@ -63,9 +63,10 @@ namespace AcaBiblioteca.Properties {
         /// <summary>
         ///   Busca un recurso adaptado de tipo System.Drawing.Bitmap.
         /// </summary>
-        internal static System.Drawing.Bitmap images {
+        internal static System.Drawing.Bitmap education_book_icon_3d_render_concept_of_school_college_library_education_dictionary_book_icon_illustration_png {
             get {
-                object obj = ResourceManager.GetObject("images", resourceCulture);
+                object obj = ResourceManager.GetObject("education-book-icon-3d-render-concept-of-school-college-library-education-diction" +
+                        "ary-book-icon-illustration-png", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

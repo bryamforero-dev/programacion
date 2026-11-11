@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\erick\\Documents\\GitHub\\programacion\\AcaBiblioteca\\AcaBiblioteca\\AcaBiblioteca.csproj": {}
+    "C:\\Users\\erick\\Downloads\\AcaBiblioteca_Proyecto\\AcaBiblioteca\\AcaBiblioteca\\AcaBiblioteca.csproj": {}
   },
   "projects": {
-    "C:\\Users\\erick\\Documents\\GitHub\\programacion\\AcaBiblioteca\\AcaBiblioteca\\AcaBiblioteca.csproj": {
+    "C:\\Users\\erick\\Downloads\\AcaBiblioteca_Proyecto\\AcaBiblioteca\\AcaBiblioteca\\AcaBiblioteca.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\erick\\Documents\\GitHub\\programacion\\AcaBiblioteca\\AcaBiblioteca\\AcaBiblioteca.csproj",
+        "projectUniqueName": "C:\\Users\\erick\\Downloads\\AcaBiblioteca_Proyecto\\AcaBiblioteca\\AcaBiblioteca\\AcaBiblioteca.csproj",
         "projectName": "AcaBiblioteca",
-        "projectPath": "C:\\Users\\erick\\Documents\\GitHub\\programacion\\AcaBiblioteca\\AcaBiblioteca\\AcaBiblioteca.csproj",
+        "projectPath": "C:\\Users\\erick\\Downloads\\AcaBiblioteca_Proyecto\\AcaBiblioteca\\AcaBiblioteca\\AcaBiblioteca.csproj",
         "packagesPath": "C:\\Users\\erick\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\erick\\Documents\\GitHub\\programacion\\AcaBiblioteca\\AcaBiblioteca\\obj\\",
+        "outputPath": "C:\\Users\\erick\\Downloads\\AcaBiblioteca_Proyecto\\AcaBiblioteca\\AcaBiblioteca\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -55,6 +55,10 @@
             "FontAwesome.Sharp": {
               "target": "Package",
               "version": "[6.6.0, )"
+            },
+            "Microsoft.Data.SqlClient": {
+              "target": "Package",
+              "version": "[7.1.1, )"
             }
           },
           "imports": [

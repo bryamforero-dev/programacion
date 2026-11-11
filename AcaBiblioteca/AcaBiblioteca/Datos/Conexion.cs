@@ -1,20 +1,19 @@
 using Microsoft.Data.SqlClient;
 
-namespace AcaBiblioteca.Datos
-{
-    /// <summary>
-    /// Clase responsable de proporcionar conexiones a SQL Server.
-    /// </summary>
-    public class Conexion
-    {
-        // Cadena de conexión unificada (Base de datos: AcaBiblioteca)
-        // Ajusta el Server según tu instancia (.\SQLEXPRESS, .\SQL2022, localhost, etc.)
-        private readonly string cadenaConexion =
-            "Server=.\\SQL2022;Database=AcaBiblioteca;Integrated Security=true;TrustServerCertificate=true;";
+namespace AcaBiblioteca.Datos;
 
-        public SqlConnection ObtenerConexion()
-        {
-            return new SqlConnection(cadenaConexion);
-        }
+/// <summary>Centraliza la configuración de acceso a SQL Server.</summary>
+public sealed class Conexion
+{
+    // Se puede sobrescribir sin recompilar mediante la variable de entorno ACABIBLIOTECA_SQL.
+    private readonly string cadenaConexion = Environment.GetEnvironmentVariable("ACABIBLIOTECA_SQL")
+        ?? @"Server=.\SQLEXPRESS;Database=AcaBiblioteca;Integrated Security=True;TrustServerCertificate=True;Encrypt=False;";
+
+    public SqlConnection ObtenerConexion() => new(cadenaConexion);
+
+    public void ProbarConexion()
+    {
+        using var cn = ObtenerConexion();
+        cn.Open();
     }
 }
